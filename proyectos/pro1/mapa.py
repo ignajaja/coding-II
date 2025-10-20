@@ -3,6 +3,8 @@ import tkinter as tk
 # 180x90px
 # ajustar 0,0 para que esté en el medio
 
+# BUSCAR -error PARA TERMINAR EL CODIGO
+
 # constantes globales
 ANCHO_MUNDO = 180
 ALTO_MUNDO = 90
@@ -63,7 +65,7 @@ MAPA = [
         ]
     ],
     [
-        "Italia", 120, 110000,
+        "Italia", 100, 110000,
         [
             "Lazio", [
                 ["Roma", [[[60, 0, 0],[-80, 0, 0]], [[90, 0, 0],[-63, 0, 0]]]],
@@ -84,7 +86,7 @@ MAPA = [
         ]
     ],
     [
-        "Alemania", 130, 120000,
+        "Alemania", 100, 120000,
         [
             "Baviera", [
                 ["Múnich", [[[160, 0, 0],[55, 0, 0]], [[125, 0, 0],[40, 0, 0]]]],
@@ -106,7 +108,7 @@ MAPA = [
         ]
     ],
     [
-        "Australia", 150, 130000, 
+        "Australia", 100, 130000, 
         [
             "Nueva Gales del Sur", [
                 ["Sídney", [[[135, 0, 0],[-20, 0, 0]], [[180, 0, 0],[-90, 0, 0]]]],
@@ -131,8 +133,9 @@ ultimo_disparo = None
 # lista de potencias
 potencias = []
 
-
+#============================
 # commons
+#============================
 
 # coordenadas a xy solo recibe entradas de tipo entry
 def coordenadas_a_xy(e_x1, e_x2, e_x3, e_y1, e_y2, e_y3):
@@ -194,20 +197,121 @@ def punto_en_rectangulo(x,y,rect):
     return ((xmin) <= x <= xmax) and (ymin <= y <= ymax) # true si le da a el rectángulo, false si no
 
 
-# lógica potencias
+def contar_extension(territorio):
+    lista_resultado = [0, 0, 0]
+    
+    for pais in MAPA:
+        for region in pais[3:]:
+            for ciudad in region[1]:
+                if ciudad[0] == territorio: 
+                    t_contar = ciudad[1]
+                    break
+    
+    rect = normalizar_rectangulo(t_contar[0], t_contar[1])
 
+    lista_resultado[0] = (rect[1][0] - rect[0][0]) * (rect[3][0] - rect[2][0]) * 60000
+    lista_resultado[1] = (rect[1][1] - rect[0][1]) * (rect[2][1] - rect[3][1]) * 1000
+    lista_resultado[2] = (rect[1][2] - rect[0][2]) * (rect[2][2] - rect[3][2]) * 16.7
+
+    return sum(lista_resultado)
+           
+
+#============================
+# lógica potencias
+#============================
+
+
+# función para asignarle el territorio a una potencia
+def reclamar_territorio(nombre, territorio):
+    global potencias
+    
+    for pais in MAPA:
+        for region in pais[3:]:
+            for ciudad in region[1]:
+                if ciudad[0] == territorio:
+                    territorio = ciudad # busca el territorio por nombre
+
+    
+    for pots in potencias:
+        if pots[0][0] == nombre: # si encuentra el nombre del territorio, se le asigna a la potencia
+            pots.append(territorio)
+
+
+# función para añadir una potencia nueva al juego
 def anadir_potencias(nombre):
     global potencias
-    nombre_pot = nombre # nombre de la potencia
+    
+    for pot in potencias:
+        if nombre == pot[0][0]:
+            # aqui salta -error cuando existe otra potencia con el mismo nombre
+            return
+    
     estado_pot = True # está activo o inactivo
     indicador_pot = True # está vivo o no
     por_vida_pot = 100 # vida restante
+    can_misiles_pot = 1000
     can_disparos_pot = 0 # cantidad de ataques enviados
     can_recibidos_pot = 0 # cantidad de ataques recibidos
 
-    potencias.append([nombre_pot,estado_pot,indicador_pot,por_vida_pot,can_disparos_pot,can_recibidos_pot])
+    potencias.append([[nombre, estado_pot, indicador_pot, por_vida_pot, can_misiles_pot, can_disparos_pot, can_recibidos_pot]])
+    
+    
+def generar_status_potencia(nombre):
+    global potencias
+    
+    result = []
+    
+    for pots in potencias:
+        if pots[0][0] == nombre:
+            print(f"Nombre: {pots[0][0]}, Estado: {"Activo" if True else "Inactivo"} Vida: {pots[0][3]}, Misiles: {pots[0][5]}, Disparos: {pots[0][6]}, Recibidos: {pots[0][7]}")
 
+
+def contar_extension(territorio):
+    lista_resultado = [0, 0, 0]
+    
+    for pais in MAPA:
+        for region in pais[3:]:
+            for ciudad in region[1]:
+                if ciudad[0] == territorio: 
+                    t_contar = ciudad[1]
+                    break
+    
+    rect = normalizar_rectangulo(t_contar[0], t_contar[1])
+
+    lista_resultado[0] = (rect[1][0] - rect[0][0]) * (rect[3][0] - rect[2][0]) * 60000
+    lista_resultado[1] = (rect[1][1] - rect[0][1]) * (rect[2][1] - rect[3][1]) * 1000
+    lista_resultado[2] = (rect[1][2] - rect[0][2]) * (rect[2][2] - rect[3][2]) * 16.7
+
+    return sum(lista_resultado)
+
+# genera el status de la potencia pedida
+def generar_status_potencia(nombre):
+    global potencias
+    
+    result = []
+    
+    extension_territorios = 0
+    
+    for pots in potencias:
+        if pots[0][0] == nombre:
+            
+            # for territorio in pots[1]:
+            try:
+                for territorio in pots[1]:
+                    extension_territorios += contar_extension(territorio)
+            except:
+                # aqui salta -error si no tiene territorios
+                True
+            # print(f"Nombre: {pots[0][0]}, Estado: {"Activo" if pots[0][1] == True else "Inactivo"}, Indicador: {"Vivo" if pots[0][2] == True else "Derrotada"}, Vida: {pots[0][3]}, Misiles: {pots[0][4]}, Disparos tirados: {pots[0][5]}, Disparos recibidos: {pots[0][6]}, Extensión en km^2: {extension_territorios}")
+            
+            # aqui va la ventana que muestra el status de la potencia -error
+    
+    return
+
+
+#============================
 # dibujo
+#============================
 
 def dibujar_ejes_y_cuadricula():
     x_left_c,  y_top_c = mundo_a_canvas(-ANCHO_MUNDO,  ALTO_MUNDO)
@@ -277,7 +381,9 @@ def refrescar_canvas():
 
 
 
+#============================
 # lógica de disparo
+#============================
 
 def disparar():
     global ultimo_disparo
@@ -319,7 +425,9 @@ def disparar():
     refrescar_canvas()
 
 
+#============================
 # IU
+#============================
 
 def construir_iu():
     global root, entrada_x, entrada_y, resultado_var, canvas, entrada_x1, entrada_x2, entrada_x3, entrada_y1, entrada_y2, entrada_y3
