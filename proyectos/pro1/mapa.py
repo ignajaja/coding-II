@@ -1,24 +1,26 @@
 import tkinter as tk
+import json, os
+import json, os
 
-# 180x90px
-# ajustar 0,0 para que esté en el medio
 
 # BUSCAR -error PARA TERMINAR EL CODIGO
 
+
+# ====================
 # constantes globales
+# ====================
+"""
+- ANCHO_MUNDO
+- ALTO_MUNDO
+- ESCALA
+- MARGEN
+- MAPA
+"""
+
 ANCHO_MUNDO = 180
 ALTO_MUNDO = 90
 ESCALA = 3
 MARGEN = 30
-
-# MAPA = [
-#     ["Japón",       [[ 10,  60], [ 30,  40]]],
-#     ["Costa Rica",  [[-60,  10], [-30,  30]]],
-#     ["Kenia",       [[ 30, -40], [ 60, -20]]],
-#     ["España",      [[-70, -60], [-40, -40]]],
-#     ["Iceland",     [[-90,  70], [-60, 60]]], 
-# ]
-
 
 MAPA = [
     [
@@ -111,14 +113,21 @@ MAPA = [
         "Australia", 100, 130000, 
         [
             "Nueva Gales del Sur", [
-                ["Sídney", [[[135, 0, 0],[-20, 0, 0]], [[180, 0, 0],[-90, 0, 0]]]],
+                ["Sidney", [[[135, 0, 0],[-20, 0, 0]], [[180, 0, 0],[-90, 0, 0]]]],
         ]
         ]
     ]
 ]
 
 
+# =======================
 # varialbes globales
+# =======================
+
+# lista de potencias
+potencias = []
+vida_territorios = []
+
 # para la IU
 root = None
 entrada_x = None
@@ -127,15 +136,21 @@ entrada_x1 = entrada_x2 = entrada_x3 = entrada_y1 = entrada_y2 = entrada_y3 = No
 resultado_var = None
 canvas = None
 
-# no para la IU
+# para disparos
 ultimo_disparo = None
 
-# lista de potencias
-potencias = []
 
 #============================
 # commons
 #============================
+"""
+- coordenadas_a_xy
+- convertir_a_xy_mapa
+- mundo_a_canvas
+- normalizar_rectangulo
+- contar_extension
+- reducir_vida_territorio
+"""
 
 # coordenadas a xy solo recibe entradas de tipo entry
 def coordenadas_a_xy(e_x1, e_x2, e_x3, e_y1, e_y2, e_y3):
@@ -214,11 +229,111 @@ def contar_extension(territorio):
     lista_resultado[2] = (rect[1][2] - rect[0][2]) * (rect[2][2] - rect[3][2]) * 16.7
 
     return sum(lista_resultado)
-           
 
+
+def asignar_vida_territorios():
+    global potencias, vida_territorios
+
+    for pais in MAPA:
+        for region in pais[3:]:
+            for ciudad in region[1]:
+                vida_territorios.append([ciudad[0], 100])
+
+    return
+
+
+def destruir_territorio(nombre):
+    global potencias, vida_territorios
+    
+    copia = []
+    
+    for ter in vida_territorios:
+        if not ter[0] == nombre:
+            copia.append(ter)
+    
+    vida_territorios = copia
+    
+    for pots in potencias:
+        nueva_lista = []
+        for ter in pots[1]:
+            if not ter[0] == nombre:
+                nueva_lista.append(ter)
+        pots[1] = nueva_lista
+        
+    guardar_vida_territorios()
+    guardar_potencias()
+    return
+
+
+def reducir_vida_territorio(territorio):
+    global vida_territorios
+    
+    for pais in MAPA:
+        for region in pais[3:]:
+            for ciudad in region[1]:
+                
+                if ciudad[0] == territorio:
+                    for ter in vida_territorios:
+                        
+                        if ter[0] == territorio:
+                            ter[1] -= 10
+                            # if ter[1] == 0:
+                            #     destruir_territorio(ter[0])    
+    
+    return
+
+def verificar_vida_potencia():
+    global potencias, vida_territorios
+
+    for pots in potencias:
+        # pots expected shape: [meta, territories...] or [meta] if no territories
+        territorios = pots[1] if len(pots) > 1 else []
+        cantidad_territorios = 0
+
+        for territorio in territorios:
+            # territorio expected to be a list whose first element is the territory name
+            nombre_terr = territorio[0]
+            for ter in vida_territorios:
+                if ter[0] == nombre_terr:
+                    cantidad_territorios += 1
+                    break
+
+        if cantidad_territorios == 0:
+            pots[0][2] = False  # set indicador_pot to False (defeated)
+        # if cantidad_territorios == 0 -> skip (power has no surviving territories)
+
+        
+    
 #============================
 # lógica potencias
 #============================
+"""
+- guardar_potencias
+- cargar_potencias
+- reclamar_territorio
+- anadir_potencias
+- generar_status_potencia
+"""
+
+# guardar a memoria
+def guardar_potencias():
+    global potencias
+    try:
+        with open("potencias.txt", "w") as f:
+            json.dump(potencias, f) # 
+    except Exception as exc:
+        print("Error al guardar potencias:", exc)
+
+
+# cargar de memoria
+def cargar_potencias():
+    global potencias
+
+    try:
+        with open("potencias.txt", "r", encoding="utf-8") as f:
+            potencias = json.load(f)
+    except Exception as exc:
+        print("Error al cargar potencias:", exc)
 
 
 # función para asignarle el territorio a una potencia
@@ -235,6 +350,9 @@ def reclamar_territorio(nombre, territorio):
     for pots in potencias:
         if pots[0][0] == nombre: # si encuentra el nombre del territorio, se le asigna a la potencia
             pots.append(territorio)
+    
+    guardar_potencias()
+    return
 
 
 # función para añadir una potencia nueva al juego
@@ -255,34 +373,8 @@ def anadir_potencias(nombre):
 
     potencias.append([[nombre, estado_pot, indicador_pot, por_vida_pot, can_misiles_pot, can_disparos_pot, can_recibidos_pot]])
     
-    
-def generar_status_potencia(nombre):
-    global potencias
-    
-    result = []
-    
-    for pots in potencias:
-        if pots[0][0] == nombre:
-            print(f"Nombre: {pots[0][0]}, Estado: {"Activo" if True else "Inactivo"} Vida: {pots[0][3]}, Misiles: {pots[0][5]}, Disparos: {pots[0][6]}, Recibidos: {pots[0][7]}")
+    return
 
-
-def contar_extension(territorio):
-    lista_resultado = [0, 0, 0]
-    
-    for pais in MAPA:
-        for region in pais[3:]:
-            for ciudad in region[1]:
-                if ciudad[0] == territorio: 
-                    t_contar = ciudad[1]
-                    break
-    
-    rect = normalizar_rectangulo(t_contar[0], t_contar[1])
-
-    lista_resultado[0] = (rect[1][0] - rect[0][0]) * (rect[3][0] - rect[2][0]) * 60000
-    lista_resultado[1] = (rect[1][1] - rect[0][1]) * (rect[2][1] - rect[3][1]) * 1000
-    lista_resultado[2] = (rect[1][2] - rect[0][2]) * (rect[2][2] - rect[3][2]) * 16.7
-
-    return sum(lista_resultado)
 
 # genera el status de la potencia pedida
 def generar_status_potencia(nombre):
@@ -309,9 +401,112 @@ def generar_status_potencia(nombre):
     return
 
 
+def cambiar_estado(nombre, estado):
+    global potencias
+    
+    for pots in potencias:
+        if pots[0][0] == nombre:
+            pots[0][1] = True if estado == "Activo" else False
+            
+    return
+
+# def comprar_misiles(nombre, cantidad):
+#     global potencias
+    
+#     for pots in potencias:
+#         if pots[0][0] == nombre:
+
+
+#============================
+# lógica de disparo
+#============================
+"""
+- disparar
+- guardar_vida_territorios
+- cargar_vida_territorios
+"""
+
+def guardar_vida_territorios():
+    global vida_territorios
+    
+    try:
+        with open("vida_territorios.txt", "w") as f:
+            json.dump(vida_territorios, f) # 
+    except Exception as exc:
+        print("Error al guardar vida_territorios:", exc)
+    return
+
+# cargar de memoria
+def cargar_vida_territorios():
+    global vida_territorios
+
+    try:
+        with open("vida_territorios.txt", "r", encoding="utf-8") as f:
+            vida_territorios = json.load(f)
+    except Exception as exc:
+        print("Error al cargar vida_territorios:", exc)
+    return
+        
+
+    
+
+def disparar():
+    global ultimo_disparo
+    punto_x = punto_y = 0
+    try:
+        x, y = coordenadas_a_xy(entrada_x1, entrada_x2,entrada_x3, entrada_y1, entrada_y2, entrada_y3)
+        
+    except ValueError:
+        resultado_var.set("Ingrese un dato válido")
+        return
+    
+    ultimo_disparo = (x, y)
+
+    if not (-ANCHO_MUNDO <= x <= ANCHO_MUNDO and -ALTO_MUNDO <= y <= ALTO_MUNDO):
+        resultado_var.set("Fuera del mapa")
+        refrescar_canvas()
+        return
+    
+    # for nombre, puntos in MAPA:
+    for pais in MAPA:
+        for prov in pais[3:]:
+            for ciud in prov[1]:
+                rect = normalizar_rectangulo(ciud[1][0], ciud[1][1])
+                xmin, xmax, ymin, ymax = rect
+                xmin, xmax = convertir_a_xy_mapa(xmin, xmax)
+                ymin, ymax = convertir_a_xy_mapa(ymin, ymax)
+                x1_c, y1_c = mundo_a_canvas(xmin,ymin)
+                x2_c, y2_c = mundo_a_canvas(xmax,ymax)
+                x_min_c, x_max_c = min(x1_c, x2_c), max(x1_c, x2_c)
+                y_min_c, y_max_c = min(y1_c, y2_c), max(y1_c, y2_c)
+                rect = x_min_c, x_max_c, y_min_c, y_max_c
+                punto_x, punto_y = mundo_a_canvas(x, y)
+                if punto_en_rectangulo(punto_x, punto_y, rect):
+                    reducir_vida_territorio(ciud[0])
+                    for territorio in vida_territorios:
+                        if territorio[0] == ciud[0]:
+                            resultado_var.set(f"Impacto a {pais[0]},\n {prov[0]}, {ciud[0]} y ahora \ntiene un {territorio[1]}% de vida!")
+                        if territorio[1] == 0:
+                            resultado_var.set(f"La ciudad de\n{pais[0]}, {prov[0]},\n{ciud[0]} ha sido destruida")
+                            destruir_territorio(ciud[0])
+                    
+                    guardar_vida_territorios()
+                    refrescar_canvas()
+                    return
+        
+    resultado_var.set("Impacto fallido")
+    refrescar_canvas()
+
+
 #============================
 # dibujo
 #============================
+"""
+- dibujar_ejes_y_cuadricula
+- dibujar_mapa
+- dibujar_disparo
+- refrescar_canvas
+"""
 
 def dibujar_ejes_y_cuadricula():
     x_left_c,  y_top_c = mundo_a_canvas(-ANCHO_MUNDO,  ALTO_MUNDO)
@@ -380,54 +575,24 @@ def refrescar_canvas():
     dibujar_disparo()
 
 
-
-#============================
-# lógica de disparo
-#============================
-
-def disparar():
-    global ultimo_disparo
-    punto_x = punto_y = 0
-    try:
-        x, y = coordenadas_a_xy(entrada_x1, entrada_x2,entrada_x3, entrada_y1, entrada_y2, entrada_y3)
-        
-    except ValueError:
-        resultado_var.set("Ingrese un dato válido")
-        return
-    
-    ultimo_disparo = (x, y)
-
-    if not (-ANCHO_MUNDO <= x <= ANCHO_MUNDO and -ALTO_MUNDO <= y <= ALTO_MUNDO):
-        resultado_var.set("Fuera del mapa")
-        refrescar_canvas()
-        return
-    
-    # for nombre, puntos in MAPA:
-    for pais in MAPA:
-        for prov in pais[3:]:
-            for ciud in prov[1]:
-                rect = normalizar_rectangulo(ciud[1][0], ciud[1][1])
-                xmin, xmax, ymin, ymax = rect
-                xmin, xmax = convertir_a_xy_mapa(xmin, xmax)
-                ymin, ymax = convertir_a_xy_mapa(ymin, ymax)
-                x1_c, y1_c = mundo_a_canvas(xmin,ymin)
-                x2_c, y2_c = mundo_a_canvas(xmax,ymax)
-                x_min_c, x_max_c = min(x1_c, x2_c), max(x1_c, x2_c)
-                y_min_c, y_max_c = min(y1_c, y2_c), max(y1_c, y2_c)
-                rect = x_min_c, x_max_c, y_min_c, y_max_c
-                punto_x, punto_y = mundo_a_canvas(x, y)
-                if punto_en_rectangulo(punto_x, punto_y, rect):
-                    resultado_var.set(f"Impacto a {pais[0]},\n {prov[0]}, {ciud[0]}!")
-                    refrescar_canvas()
-                    return
-        
-    resultado_var.set("Impacto fallido")
-    refrescar_canvas()
+# ======================
+# cargar 
+# ======================
 
 
+cargar_potencias()
+asignar_vida_territorios()
+cargar_vida_territorios()
+# reducir_vida_territorio("Roma")
+# destruir_territorio("Pisa")
+
+# print(vida_territorios)
 #============================
 # IU
 #============================
+"""
+- construir_iu
+"""
 
 def construir_iu():
     global root, entrada_x, entrada_y, resultado_var, canvas, entrada_x1, entrada_x2, entrada_x3, entrada_y1, entrada_y2, entrada_y3

@@ -100,7 +100,7 @@ Pide al usuario una palabra, conviértela en una lista de caracteres y verifica 
 Ejemplo:
 Entrada: "reconocer"
 Salida: True
-'''
+'''`
 
 def verificar_palindromos(pal):
     lista = []
@@ -113,7 +113,7 @@ def verificar_palindromos(pal):
         lista.pop()
 
     return True
-
+`
 print (verificar_palindromos("reconnocer"))
     
 
