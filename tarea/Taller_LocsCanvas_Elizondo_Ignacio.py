@@ -9,9 +9,9 @@ zonas = {
    "Jaguar_Refugio": {"x1": 50, "y1": 60, "x2": 220, "y2": 150, "tipo": "hábitat", "color": "#2E86DE"},
    "Rio_Boscoso": {"x1": 300, "y1": 40, "x2": 500, "y2": 120, "tipo": "río", "color": "#1ABC9C"},
    "Zona_Protegida": {"x1": 120, "y1": 180, "x2": 480, "y2": 320, "tipo": "protección", "color": "#F1C40F"},
-   "Mirador": {"x1": 400, "y1": 260, "x2": 350, "y2": 200, "tipo": "mirador", "color": "#E74C3C"},  # invertidas
+   "Mirador": {"x1": 400, "y1": 260, "x2": 350, "y2": 200, "tipo": "mirador", "color": "#E74C3C"},
    "Taller_Educativo": {"x1": 10, "y1": 330, "x2": 140, "y2": 390, "tipo": "servicio", "color": "#9B59B6"},
-   "Zona_Fuera": {"x1": 580, "y1": 50, "x2": 700, "y2": 140, "tipo": "fuera", "color": "#7F8C8D"}  # fuera
+   "Zona_Fuera": {"x1": 580, "y1": 50, "x2": 700, "y2": 140, "tipo": "fuera", "color": "#7F8C8D"}
 }
 
 # ================
@@ -28,17 +28,12 @@ def normalizar_rectangulo(info):
 
 
 def esta_en_rango(x1, y1, x2, y2, ancho, alto):
-    """Verifica si el rectángulo está total o parcialmente dentro del canvas."""
     if x2 < 0 or y2 < 0 or x1 > ancho or y1 > alto:
         return False
     return True
 
 
 def construir_rectangulos(zonas, ancho, alto):
-    """
-    Recorre zonas, normaliza, filtra con esta_en_rango
-    y retorna lista de (nombre, x1, y1, x2, y2, color, tipo)
-    """
     rects = []
     for nombre, datos in zonas.items():
         x1n, y1n, x2n, y2n = normalizar_rectangulo(datos)
@@ -54,7 +49,6 @@ def construir_rectangulos(zonas, ancho, alto):
 
 
 def dibujar_mapa(canvas, rects):
-    """Dibuja los rectángulos y los nombres sobre el Canvas."""
     ids = []
     for dato in rects:
         nombre, x1, y1, x2, y2, color, tipo = dato
@@ -66,7 +60,6 @@ def dibujar_mapa(canvas, rects):
 
 
 def resumen_por_tipo(rects):
-    """Retorna un diccionario con el área total por tipo."""
     resumen = {}
     for nombre, x1, y1, x2, y2, color, tipo in rects:
         if tipo is None:

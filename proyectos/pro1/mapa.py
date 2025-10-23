@@ -594,7 +594,7 @@ cargar_vida_territorios()
 - construir_iu
 """
 
-def construir_iu():
+def construir_mapa():
     global root, entrada_x, entrada_y, resultado_var, canvas, entrada_x1, entrada_x2, entrada_x3, entrada_y1, entrada_y2, entrada_y3
     root = tk.Tk()
     root.title("Mapa cartesiano (cuadricula 18x9)")
@@ -638,7 +638,35 @@ def construir_iu():
     globals()["canvas"] = canvas_local
     refrescar_canvas()
     root.mainloop()
+    
+
+def construir_menu():
+    global root
+    
+    construir_mapa()
+
+    
+    root = tk.Tk()
+    root.geometry("400x600")
+    root.title("Menu de opciones")
+    
+    contenedor = tk.Frame(root)
+    contenedor.pack(fill="both", expand=True)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10), pady=50)
+    
+    
+    tk.Label(panel, text='Seleccione su opción:', font=("Arial", 16, "bold")).pack(anchor='w', pady=12,)
+    tk.Button(panel,text='').pack(anchor='w')
+    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
+    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
+    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
+    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
+    
+    
+    root.mainloop()
+    
 
 if __name__ == "__main__":
-    construir_iu()
+    construir_menu()
 
