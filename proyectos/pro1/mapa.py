@@ -132,9 +132,10 @@ vida_territorios = []
 root = None
 entrada_x = None
 entrada_y = None
-entrada_x1 = entrada_x2 = entrada_x3 = entrada_y1 = entrada_y2 = entrada_y3 = None
-resultado_var = None
+entrada_x1 = entrada_x2 = entrada_x3 = entrada_y1 = entrada_y2 = entrada_y3 = entrada_potencia = entrada_potencia_r = entrada_territorio= None
+resultado_var = status_var = confirmacion_var = None
 canvas = None
+tamano_botones = (18, 2)
 
 # para disparos
 ultimo_disparo = None
@@ -233,6 +234,7 @@ def contar_extension(territorio):
 
 def asignar_vida_territorios():
     global potencias, vida_territorios
+    vida_territorios = []
 
     for pais in MAPA:
         for region in pais[3:]:
@@ -315,14 +317,17 @@ def verificar_vida_potencia():
 - generar_status_potencia
 """
 
+
 # guardar a memoria
 def guardar_potencias():
     global potencias
     try:
         with open("potencias.txt", "w") as f:
-            json.dump(potencias, f) # 
+            json.dump(potencias, f)
     except Exception as exc:
-        print("Error al guardar potencias:", exc)
+        # print("Error al guardar potencias:", exc)
+        construir_error()
+    return
 
 
 # cargar de memoria
@@ -333,31 +338,42 @@ def cargar_potencias():
         with open("potencias.txt", "r", encoding="utf-8") as f:
             potencias = json.load(f)
     except Exception as exc:
-        print("Error al cargar potencias:", exc)
+        # print("Error al cargar potencias:", exc)
+        construir_error()
+    return
 
 
 # función para asignarle el territorio a una potencia
-def reclamar_territorio(nombre, territorio):
-    global potencias
-    
+def reclamar_territorio():
+    global potencias, entrada_potencia_r, entrada_territorio
+
+    nombre = entrada_potencia_r.get()
+    territorio = entrada_territorio.get()
+
     for pais in MAPA:
         for region in pais[3:]:
             for ciudad in region[1]:
                 if ciudad[0] == territorio:
                     territorio = ciudad # busca el territorio por nombre
 
-    
     for pots in potencias:
+        if pots[0][2] == False:
+            continue # si la potencia está derrotada, no puede reclamar territorios
+        # if territorio in pots[1]:
+        #     return # si la potencia ya tiene el territorio, no se le asigna de nuevo
         if pots[0][0] == nombre: # si encuentra el nombre del territorio, se le asigna a la potencia
             pots.append(territorio)
     
+    construir_confirmacion("Territorio reclamado con éxito")
     guardar_potencias()
     return
 
 
 # función para añadir una potencia nueva al juego
-def anadir_potencias(nombre):
-    global potencias
+def anadir_potencias():
+    global potencias, entrada_potencia
+
+    nombre = entrada_potencia.get()
     
     for pot in potencias:
         if nombre == pot[0][0]:
@@ -372,17 +388,19 @@ def anadir_potencias(nombre):
     can_recibidos_pot = 0 # cantidad de ataques recibidos
 
     potencias.append([[nombre, estado_pot, indicador_pot, por_vida_pot, can_misiles_pot, can_disparos_pot, can_recibidos_pot]])
+
+    construir_confirmacion("Potencia añadida con éxito")
+    guardar_potencias()
     
     return
 
 
 # genera el status de la potencia pedida
-def generar_status_potencia(nombre):
-    global potencias
-    
-    result = []
-    
+def generar_status_potencia():
+    global potencias, status_var, entrada_potencia
+      
     extension_territorios = 0
+    nombre = entrada_potencia.get()
     
     for pots in potencias:
         if pots[0][0] == nombre:
@@ -395,10 +413,12 @@ def generar_status_potencia(nombre):
                 # aqui salta -error si no tiene territorios
                 True
             # print(f"Nombre: {pots[0][0]}, Estado: {"Activo" if pots[0][1] == True else "Inactivo"}, Indicador: {"Vivo" if pots[0][2] == True else "Derrotada"}, Vida: {pots[0][3]}, Misiles: {pots[0][4]}, Disparos tirados: {pots[0][5]}, Disparos recibidos: {pots[0][6]}, Extensión en km^2: {extension_territorios}")
-            
-            # aqui va la ventana que muestra el status de la potencia -error
-    
-    return
+            status_var.set(f"Nombre: {pots[0][0]}\nEstado: {'Activo' if pots[0][1] == True else 'Inactivo'}\nIndicador: {'Vivo' if pots[0][2] == True else 'Derrotada'}\nVida: {pots[0][3]}%\nMisiles: {pots[0][4]}\nDisparos tirados: {pots[0][5]}\nDisparos recibidos: {pots[0][6]}\nExtensión en km²: {extension_territorios}")
+            return
+        
+    status_var.set("Potencia no encontrada")
+                
+    return 
 
 
 def cambiar_estado(nombre, estado):
@@ -407,14 +427,38 @@ def cambiar_estado(nombre, estado):
     for pots in potencias:
         if pots[0][0] == nombre:
             pots[0][1] = True if estado == "Activo" else False
-            
+    
+    construir_confirmacion("Estado cambiado con éxito")
+    guardar_potencias()
     return
 
-# def comprar_misiles(nombre, cantidad):
-#     global potencias
+
+def comprar_misiles():
+    global potencias, vida_territorios, entrada_potencia, entrada_cantidad_misiles
+
+    nombre = entrada_potencia.get()
+    cantidad = int(entrada_cantidad_misiles.get())
+
+    if cantidad <= 0 or cantidad > 1000:
+        construir_error("Cantidad inválida, debe ser positiva y menor o igual a 1000")
+        return # cantidad es inválida
+    if cantidad % 100 != 0:
+        construir_error("Debe ser un número múltiplo de 100")
+        return # no es múltiplo de 100
     
-#     for pots in potencias:
-#         if pots[0][0] == nombre:
+    for pots in potencias:
+        if pots[0][0] == nombre:
+            pots[0][4] += cantidad
+            territorio = pots[1][0]
+
+    for ter in vida_territorios:
+        if ter[0] == territorio[0]:
+            ter[1] -= (cantidad // 100) * 10
+
+    construir_confirmacion("Misiles comprados con éxito")
+    guardar_potencias()
+    guardar_vida_territorios()
+    return
 
 
 #============================
@@ -433,7 +477,8 @@ def guardar_vida_territorios():
         with open("vida_territorios.txt", "w") as f:
             json.dump(vida_territorios, f) # 
     except Exception as exc:
-        print("Error al guardar vida_territorios:", exc)
+        # print("Error al guardar vida_territorios:", exc)
+        construir_error()
     return
 
 # cargar de memoria
@@ -444,14 +489,14 @@ def cargar_vida_territorios():
         with open("vida_territorios.txt", "r", encoding="utf-8") as f:
             vida_territorios = json.load(f)
     except Exception as exc:
-        print("Error al cargar vida_territorios:", exc)
+        # print("Error al cargar vida_territorios:", exc)
+        construir_error()
     return
+
         
 
-    
-
 def disparar():
-    global ultimo_disparo
+    global ultimo_disparo, resultado_var
     punto_x = punto_y = 0
     try:
         x, y = coordenadas_a_xy(entrada_x1, entrada_x2,entrada_x3, entrada_y1, entrada_y2, entrada_y3)
@@ -473,6 +518,7 @@ def disparar():
             for ciud in prov[1]:
                 rect = normalizar_rectangulo(ciud[1][0], ciud[1][1])
                 xmin, xmax, ymin, ymax = rect
+
                 xmin, xmax = convertir_a_xy_mapa(xmin, xmax)
                 ymin, ymax = convertir_a_xy_mapa(ymin, ymax)
                 x1_c, y1_c = mundo_a_canvas(xmin,ymin)
@@ -481,14 +527,16 @@ def disparar():
                 y_min_c, y_max_c = min(y1_c, y2_c), max(y1_c, y2_c)
                 rect = x_min_c, x_max_c, y_min_c, y_max_c
                 punto_x, punto_y = mundo_a_canvas(x, y)
+                
                 if punto_en_rectangulo(punto_x, punto_y, rect):
-                    reducir_vida_territorio(ciud[0])
+
                     for territorio in vida_territorios:
-                        if territorio[0] == ciud[0]:
-                            resultado_var.set(f"Impacto a {pais[0]},\n {prov[0]}, {ciud[0]} y ahora \ntiene un {territorio[1]}% de vida!")
-                        if territorio[1] == 0:
-                            resultado_var.set(f"La ciudad de\n{pais[0]}, {prov[0]},\n{ciud[0]} ha sido destruida")
-                            destruir_territorio(ciud[0])
+                        if territorio[1] <= 0:
+                            resultado_var.set(f"Impacto en {(x, y)}. La ciudad de\n{pais[0]}, {prov[0]},\n{ciud[0]} ha sido destruida")
+                        elif territorio[0] == ciud[0]:
+                            reducir_vida_territorio(ciud[0])
+                            resultado_var.set(f"Impacto en {(x, y)}. A {pais[0]},\n {prov[0]}, {ciud[0]} y ahora \ntiene un {territorio[1]}% de vida!")
+                            # destruir_territorio(ciud[0])
                     
                     guardar_vida_territorios()
                     refrescar_canvas()
@@ -535,7 +583,7 @@ def dibujar_mapa():
         for provincia in pais[3:]:
             for ciudad in provincia[1]:
                 
-        # aqui tienen que ir los puntos de los territorios, y convertirlas a coordenadas XY
+                # aqui tienen que ir los puntos de los territorios, y convertirlas a coordenadas XY
                 rect = normalizar_rectangulo(ciudad[1][0], ciudad[1][1])
                 xmin,xmax,ymin,ymax = rect
                 xmin, ymin = convertir_a_xy_mapa(xmin, ymin)
@@ -592,19 +640,219 @@ cargar_vida_territorios()
 #============================
 """
 - construir_iu
+
 """
+
+def construir_error(msg = "Ha ocurrido un error inesperado"):
+    global root
+    win = tk.Toplevel(root)
+    win.geometry("400x200")
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, textvariable=msg, font=("Arial", 12)).pack(anchor='w', pady=20)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+def construir_confirmacion(msj="Ha ocurrido un tarea realizada con éxito"):
+    global root
+    win = tk.Toplevel(root)
+    win.geometry("400x200")
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, text=msj, font=("Arial", 12)).pack(anchor='w', pady=20)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+
+
+def construir_anadir_potencia():
+    global root, entrada_potencia
+    win = tk.Toplevel(root)
+    win.geometry("400x200")
+
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill='y', padx=(0,10))
+
+    tk.Label(panel, text="Ingrese el nombre de la nueva potencia", font=("Arial", 10)).pack(anchor="se", pady=10)
+    entrada_potencia = tk.Entry(panel, width=25); entrada_potencia.pack(anchor='w', pady=10)
+    tk.Button(panel, text="Aceptar", command=anadir_potencias, font=("Arial", 10)).pack(anchor="w", pady=10)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+
+def construir_confirmacion_reestablecimiento():
+
+    asignar_vida_territorios()
+    guardar_vida_territorios()
+    cargar_vida_territorios()
+
+    global root
+    win = tk.Toplevel(root)
+    win.geometry("400x200")
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, text="La vida de todos los territorios\nha sido reestablecida a 100", font=("Arial", 12)).pack(anchor='w', pady=20)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+
+def construir_reclamar_territorio():
+    global root, entrada_potencia_r, entrada_territorio
+    win = tk.Toplevel(root)
+    win.geometry("800x300")
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, text="Ingrese el nombre de la potencia y la ciudad que reclama", font=("Arial", 12)).pack(anchor='w', pady=20)
+    entrada_potencia_r = tk.Entry(panel, width=25); entrada_potencia_r.pack(anchor='w', pady=10)
+    entrada_territorio = tk.Entry(panel, width=25); entrada_territorio.pack(anchor='w', pady=10)
+    tk.Button(panel, text="Aceptar", font=("Arial", 10), command=reclamar_territorio).pack(anchor="w", pady=10)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+
+def construir_mostrar_potencias():
+    global root
+    win = tk.Toplevel(root)
+    # win.geometry("400x400")
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, text="Estado de las potencias:", font=("Arial", 12, "bold")).pack(anchor='w', pady=20)
+
+    if not potencias:
+        tk.Label(panel, text="No hay potencias registradas", font=("Arial", 10)).pack(anchor='w', pady=10)
+        return
+    
+    for pots in potencias:
+        nombre = pots[0][0]
+        estado = "Activo" if pots[0][1] else "Inactivo"
+        indicador = "Vivo" if pots[0][2] else "Derrotada"
+        vida = pots[0][3]
+        misiles = pots[0][4]
+        disparos_tirados = pots[0][5]
+        disparos_recibidos = pots[0][6]
+        try:
+            extension_territorios = 0
+            for territorio in pots[1]:
+                extension_territorios += contar_extension(territorio)
+        except:
+            True
+        
+        info_text = (f"Nombre: {nombre}\n"
+                     f"Estado: {estado}\n"
+                     f"Indicador: {indicador}\n"
+                     f"Vida: {vida}\n"
+                     f"Misiles: {misiles}\n"
+                     f"Disparos tirados: {disparos_tirados}\n"
+                     f"Disparos recibidos: {disparos_recibidos}\n"
+                     f"Extensión en km²: {extension_territorios}\n")
+        
+        tk.Label(panel, text=info_text, justify="left", font=("Arial", 10)).pack(anchor='w', pady=10)
+    
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+def construir_reestablecer_potencias():
+    global potencias
+    potencias = []
+    guardar_potencias()
+
+    global root
+    win = tk.Toplevel(root)
+    win.geometry("400x200")
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, text="Las potencias han sido reestablecidas", font=("Arial", 12)).pack(anchor='w', pady=20)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+
+def construir_mostrar_vida_territorios():
+    global root, vida_territorios
+    win = tk.Toplevel(root)
+    
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+    
+
+    tk.Label(panel, text="Vida de los territorios:", font=("Arial", 12, "bold")).pack(pady=20)
+    
+    for ter in vida_territorios:
+        nombre = ter[0]
+        vida = ter[1]
+        
+        info_text = f"Nombre: {nombre} - Vida: {vida}%"
+        
+        tk.Label(panel, text=info_text, justify="left", font=("Arial", 10)).pack(anchor='w', pady=5)
+    
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
+def construir_status_potencia():
+    global root, entrada_potencia, status_var
+    win = tk.Toplevel(root)
+    win.geometry("400x500")
+
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill='y', padx=(0,10))
+
+    tk.Label(panel, text="Ingrese el nombre de la potencia", font=("Arial", 10)).pack(anchor="se", pady=10)
+    entrada_potencia = tk.Entry(panel, width=25); entrada_potencia.pack(anchor='w', pady=10)
+    tk.Button(panel, text="Aceptar", command=generar_status_potencia, font=("Arial", 10)).pack(anchor="w", pady=10)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+    status_var = tk.StringVar(master=root, value="")
+    tk.Label(panel, textvariable=status_var, font=("Arial", 11, "bold")).pack(anchor="n", pady=(4,0))
+
+def construir_comprar_misiles():
+    global root, entrada_potencia, entrada_cantidad_misiles
+    win = tk.Toplevel(root)
+    win.geometry("400x400")
+
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill='both', expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill='y', padx=(0,10))
+
+    tk.Label(panel, text="Ingrese el nombre de la potencia", font=("Arial", 10)).pack(anchor="se", pady=10)
+    entrada_potencia = tk.Entry(panel, width=25); entrada_potencia.pack(anchor='w', pady=10)
+    tk.Label(panel, text="Ingrese la cantidad de misiles a comprar", font=("Arial", 10)).pack(anchor="se", pady=10)
+    entrada_cantidad_misiles = tk.Entry(panel, width=25); entrada_cantidad_misiles.pack(anchor='w', pady=10)
+    tk.Button(panel, text="Aceptar", command=comprar_misiles, font=("Arial", 10)).pack(anchor="w", pady=10)
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor='se', pady=10)
+
 
 def construir_mapa():
     global root, entrada_x, entrada_y, resultado_var, canvas, entrada_x1, entrada_x2, entrada_x3, entrada_y1, entrada_y2, entrada_y3
-    root = tk.Tk()
-    root.title("Mapa cartesiano (cuadricula 18x9)")
 
-    contenedor = tk.Frame(root)
+    win = tk.Toplevel(root)
+
+    contenedor = tk.Frame(win)
     contenedor.pack(fill='both', expand=True, padx=10, pady=10)
     panel_izq = tk.Frame(contenedor)
     panel_izq.pack(side="left", fill="y", padx=(0,10))
 
-    tk.Label(panel_izq, text="Coordenadas del disparo", font=("Arial", 12, "bold")).pack(anchor="w", pady=(0,8))
+    tk.Label(panel_izq, text="Coordenadas del disparo", font=("Arial", 12, "bold")).pack(anchor="se", pady=(0,8))
 
     fila_x = tk.Frame(panel_izq); fila_x.pack(anchor="w", pady=4)
     tk.Label(fila_x, text="X: ").pack(side="left")
@@ -624,8 +872,10 @@ def construir_mapa():
 
 
     tk.Button(panel_izq,text="Disparar", command=disparar).pack(anchor="w", pady=10)
-    resultado_var = tk.StringVar(value="Listo para disparar en (0,0).")
+    resultado_var = tk.StringVar(master=root, value="Listo para disparar en (0,0).")
     tk.Label(panel_izq, textvariable=resultado_var, fg='blue').pack(anchor="w", pady=(4,0))
+    tk.Button(panel_izq, text="Cerrar", command=win.destroy, font=("Arial", 10)).pack(anchor="se", pady=20)
+
 
     panel_der = tk.Frame(contenedor)
     panel_der.pack(side="left", fill="both", expand=True)
@@ -637,14 +887,11 @@ def construir_mapa():
 
     globals()["canvas"] = canvas_local
     refrescar_canvas()
-    root.mainloop()
+    # root.mainloop()
     
 
 def construir_menu():
     global root
-    
-    construir_mapa()
-
     
     root = tk.Tk()
     root.geometry("400x600")
@@ -657,12 +904,17 @@ def construir_menu():
     
     
     tk.Label(panel, text='Seleccione su opción:', font=("Arial", 16, "bold")).pack(anchor='w', pady=12,)
-    tk.Button(panel,text='').pack(anchor='w')
-    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
-    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
-    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
-    tk.Button(panel,text='mapa').pack(anchor='w', pady=10)
-    
+    tk.Button(panel,text='Mostrar Mapa', command=construir_mapa, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Añadir potencia', command=construir_anadir_potencia, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Reclamar Territorio', command=construir_reclamar_territorio, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Mostrar Potencias', command=construir_mostrar_potencias, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Status Potencia', command=construir_status_potencia, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Mostrar vida territorios', command=construir_mostrar_vida_territorios, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Comprar misiles', command=construir_comprar_misiles, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Reestablecer Potencias', command=construir_reestablecer_potencias, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel,text='Reestablecer vida territorios', command=construir_confirmacion_reestablecimiento, width=tamano_botones[0], height=tamano_botones[1]).pack(anchor='w', pady=10)
+    tk.Button(panel, text="Cerrar", command=root.destroy, font=("Arial", 10)).pack(anchor='se', pady=20)
+
     
     root.mainloop()
     
