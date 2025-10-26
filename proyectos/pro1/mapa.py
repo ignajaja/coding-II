@@ -50,7 +50,7 @@ MAPA = [
         [
             "Antioquia", [
                 ["Medellin", [[[-30, 0, 0],[50, 0, 0]], [[-50, 0, 0],[70, 0, 0]]]],
-                ["Bello", [[[-45, 0, 0],[47, 0, 0]], [[-20, 0, 0],[42, 0, 0]]]]
+                # ["Bello", [[[-45, 0, 0],[80, 0, 0]], [[-20, 0, 0],[42, 0, 0]]]]
             ]
         ],
         [
@@ -152,6 +152,8 @@ ultimo_disparo = None
 - contar_extension
 - reducir_vida_territorio
 """
+
+
 
 # coordenadas a xy solo recibe entradas de tipo entry
 def coordenadas_a_xy(e_x1, e_x2, e_x3, e_y1, e_y2, e_y3):
@@ -261,15 +263,12 @@ def destruir_territorio(nombre):
     
     vida_territorios = copia
     
-    # Corregir la eliminación del territorio en la lista de potencias
     for pots in potencias:
         nueva_lista = []
-        # iterar sobre los territorios reales (pots[1:])
-        for ter in pots[1:]:
+        for ter in pots[1]:
             if not ter[0] == nombre:
                 nueva_lista.append(ter)
-        # reasignar la porción de territorios conservando la meta en pots[0]
-        pots[1:] = nueva_lista
+        pots[1] = nueva_lista
         
     guardar_vida_territorios()
     guardar_potencias()
@@ -313,8 +312,32 @@ def verificar_vida_potencia():
             pots[0][2] = False  # set indicador_pot to False (defeated)
         # if cantidad_territorios == 0 -> skip (power has no surviving territories)
 
-        
-    
+def mapa_se_traslapa():
+    global MAPA
+
+    for pais in MAPA:
+        for region in pais[3:]:
+            for ciudad in region[1]:
+                territorio = ciudad[1]
+                rect = normalizar_rectangulo(territorio[0], territorio[1])
+                for pais_j in MAPA:
+                    for region_j in pais_j[3:]:
+                        for ciudad_j in region_j[1]:
+                            if ciudad_j[0] != ciudad[0]:  # evitar comparar el mismo territorio
+                                territorio_j = ciudad_j[1]
+                                rect_j = normalizar_rectangulo(territorio_j[0], territorio_j[1])
+                                lista1 = [[[rect[0][0], rect[2][0]],[rect[0][0],rect[3][0]]],[[rect[1][0], rect[2][0]],[rect[1][0],rect[3][0]]]]
+                                lista2 = [[[rect_j[0][0], rect_j[2][0]],[rect_j[0][0],rect_j[3][0]]],[[rect_j[1][0], rect_j[2][0]],[rect_j[1][0],rect_j[3][0]]]]
+
+                                for r in lista1:
+                                    for s in lista2:
+                                        if (r[0][0]<= s[0][0] <= r[1][0] and r[0][1]<= s[0][1] <= r[1][1]) or (r[0][0]<= s[1][0] <= r[1][0] and r[0][1]<= s[1][1] <= r[1][1]):
+                                            return False
+    return True 
+
+mapa_se_traslapa()
+
+
 #============================
 # lógica potencias
 #============================
@@ -343,10 +366,9 @@ def construir_error(msg = "Ha ocurrido un error inesperado"):
 # guardar a memoria
 def guardar_potencias():
     global potencias
-    ruta = os.path.join(os.path.dirname(__file__), "potencias.txt")
     try:
-        with open(ruta, "w", encoding="utf-8") as f:
-            json.dump(potencias, f, ensure_ascii=False)
+        with open("potencias.txt", "w") as f:
+            json.dump(potencias, f)
     except Exception as exc:
         construir_error()
     return
@@ -355,12 +377,10 @@ def guardar_potencias():
 # cargar de memoria
 def cargar_potencias():
     global potencias
-    ruta = os.path.join(os.path.dirname(__file__), "potencias.txt")
+
     try:
-        with open(ruta, "r", encoding="utf-8") as f:
+        with open("potencias.txt", "r", encoding="utf-8") as f:
             potencias = json.load(f)
-    except FileNotFoundError:
-        potencias = []
     except Exception as exc:
         construir_error()
     return
@@ -387,8 +407,9 @@ def reclamar_territorio():
         return # si no encuentra el territorio, sale de la función
 
     for pots in potencias:
-        if pots[0][2] == False:
-            continue # si la potencia está derrotada, no puede reclamar territorios
+        if pots[0][1] == False:
+            construir_error("La potencia está inactiva")
+            continue # si la potencia está inactiva, no puede reclamar territorios
         for ter in pots[1:]:
             if ter[0] == territorio[0]:
                 construir_error("Una potencia ya posee este territorio")
@@ -411,6 +432,7 @@ def anadir_potencias():
     for pot in potencias:
         if nombre == pot[0][0]:
             # aqui salta -error cuando existe otra potencia con el mismo nombre
+            construir_error("Ya existe una potencia con ese nombre")
             return
     
     estado_pot = True # está activo o inactivo
@@ -470,33 +492,6 @@ def cambiar_estado(nombre, estado):
     return
 
 
-def comprar_misiles():
-    global potencias, vida_territorios, entrada_potencia, entrada_cantidad_misiles
-
-    nombre = entrada_potencia.get()
-    cantidad = int(entrada_cantidad_misiles.get())
-
-    if cantidad <= 0 or cantidad > 1000:
-        construir_error("Cantidad inválida, debe ser positiva y menor o igual a 1000")
-        return # cantidad es inválida
-    if cantidad % 100 != 0:
-        construir_error("Debe ser un número múltiplo de 100")
-        return # no es múltiplo de 100
-    
-    for pots in potencias:
-        if pots[0][0] == nombre:
-            pots[0][4] += cantidad
-            territorio = pots[1][0]
-
-    for ter in vida_territorios:
-        if ter[0] == territorio[0]:
-            ter[1] -= (cantidad // 100) * 10
-
-    construir_confirmacion("Misiles comprados con éxito")
-    guardar_potencias()
-    guardar_vida_territorios()
-    return
-
 def contar_vida_territorios_potencia(nombre_potencia):
     global potencias, vida_territorios
     vida_total = 0
@@ -526,17 +521,41 @@ def actualizar_vida_potencia(ciudad):
                 if territorios[0] == ciudad:
                     pots[0][3] = contar_vida_territorios_potencia(pots[0][0]) # actualizar vida de la potencia según la vida de sus territorios
                     pots[0][6] += 1 # aumentar disparos recibidos
-            # if pots[1][0] == ciudad:
-            #     for ter in vida_territorios:
-            #         if ter[0] == pots[1][0]:
-            #             pots[0][3] = contar_vida_territorios_potencia(pots[0][0]) # actualizar vida de la potencia según la vida de sus territorios
-            #             pots[0][6] += 1 # aumentar disparos recibidos
+                            
                             
         except:
             continue
     
 
     guardar_potencias()
+    return
+
+
+def comprar_misiles():
+    global potencias, vida_territorios, entrada_potencia, entrada_cantidad_misiles
+
+    nombre = entrada_potencia.get()
+    cantidad = int(entrada_cantidad_misiles.get())
+
+    if cantidad <= 0 or cantidad > 1000:
+        construir_error("Cantidad inválida, debe ser positiva y menor o igual a 1000")
+        return # cantidad es inválida
+    if cantidad % 100 != 0:
+        construir_error("Debe ser un número múltiplo de 100")
+        return # no es múltiplo de 100
+    
+    for pots in potencias:
+        if pots[0][0] == nombre:
+            pots[0][4] += cantidad
+            territorio = pots[1][0]
+    for ter in vida_territorios:
+        if ter[0] == territorio:
+            ter[1] -= (cantidad // 100) * 10
+            actualizar_vida_potencia(territorio)
+
+    construir_confirmacion("Misiles comprados con éxito")
+    guardar_potencias()
+    guardar_vida_territorios()
     return
 
 
@@ -551,10 +570,10 @@ def actualizar_vida_potencia(ciudad):
 
 def guardar_vida_territorios():
     global vida_territorios
-    ruta = os.path.join(os.path.dirname(__file__), "vida_territorios.txt")
+    
     try:
-        with open(ruta, "w", encoding="utf-8") as f:
-            json.dump(vida_territorios, f)
+        with open("vida_territorios.txt", "w") as f:
+            json.dump(vida_territorios, f) # 
     except Exception as exc:
         construir_error()
     return
@@ -562,12 +581,10 @@ def guardar_vida_territorios():
 # cargar de memoria
 def cargar_vida_territorios():
     global vida_territorios
-    ruta = os.path.join(os.path.dirname(__file__), "vida_territorios.txt")
+
     try:
-        with open(ruta, "r", encoding="utf-8") as f:
+        with open("vida_territorios.txt", "r", encoding="utf-8") as f:
             vida_territorios = json.load(f)
-    except FileNotFoundError:
-        vida_territorios = []
     except Exception as exc:
         construir_error()
     return
@@ -595,7 +612,7 @@ def disparar():
     ultimo_disparo = (x, y)
     potencia = entrada_potencia.get()                
     if not verificar_potencia(potencia):
-        resultado_var.set("Potencia inválida o inactiva")
+        resultado_var.set("Ingrese un nombre válido de una potencia activa")
         refrescar_canvas()
         return
 
@@ -655,7 +672,8 @@ def disparar():
                         resultado_var.set(f"Impacto en {(x, y)}. La ciudad de\n{pais[0]}, {prov[0]},\n{ciud[0]} no existe o ya fue destruida")
                     else:
                         # Si la vida está por debajo o igual al umbral, destruir
-                        if registro[1] <= 10:
+                        if registro[1] == 10:
+                            reducir_vida_territorio(ciud[0])
                             # contar este impacto como recibido por la potencia propietaria
                             if propietario:
                                 propietario[0][6] += 1
@@ -669,7 +687,7 @@ def disparar():
                                     propietario[0][2] = False
 
                             resultado_var.set(f"Impacto en {(x, y)}. La ciudad de\n{pais[0]}, {prov[0]},\n{ciud[0]} ha sido destruida")
-                        else:
+                        elif registro[1] > 10:
                             # Reducir vida y notificar; luego actualizar vida de la potencia
                             reducir_vida_territorio(ciud[0])
                             # obtener nueva vida del registro actualizado
@@ -877,10 +895,11 @@ def construir_mostrar_potencias():
     panel.pack(fill="y", padx=(0,10))
 
     tk.Label(panel, text="Estado de las potencias:", font=("Arial", 12, "bold")).pack(anchor='w', pady=20)
-    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
     if not potencias:
         tk.Label(panel, text="No hay potencias registradas", font=("Arial", 10)).pack(anchor='w', pady=10)
+        tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
+
         return
     
     for pots in potencias:
@@ -979,6 +998,10 @@ def construir_comprar_misiles():
 def construir_mapa():
     global root, entrada_x, entrada_y, resultado_var, canvas, entrada_x1, entrada_x2, entrada_x3, entrada_y1, entrada_y2, entrada_y3, entrada_potencia
 
+    if mapa_se_traslapa() == False:
+        construir_error("Error: Hay territorios que se traslapan en el mapa.")
+        return
+
     win = tk.Toplevel(root)
     win.title("Mapa de territorios")
 
@@ -1008,7 +1031,6 @@ def construir_mapa():
     entrada_y3 = tk.Entry(fila_y, width=5); entrada_y3.pack(side='left'); entrada_y3.insert(0, '0')
 
     # entrada_x, entrada_y = coordenadas_a_xy()
-
 
     tk.Button(panel_izq,text="Disparar", command=disparar).pack(anchor="w", pady=10)
     resultado_var = tk.StringVar(master=root, value="Listo para disparar en (0,0).")
