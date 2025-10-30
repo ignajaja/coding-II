@@ -276,7 +276,7 @@ def actualizar_registro_cambio(potencia, cambio):
     global lista_registro
     
     tiempo = generar_tiempo()
-    texto = [[tiempo],[2],[potencia],[cambio]]
+    texto = [[tiempo],[2],[potencia],["activa" if cambio == True else "inactiva"]]
     lista_registro.append(texto)
     guardar_registro()
     
@@ -997,7 +997,7 @@ def construir_anadir_potencia():
 def construir_reclamar_territorio():
     global root, entrada_potencia_r, entrada_territorio
     win = tk.Toplevel(root)
-    win.geometry("800x300")
+    win.geometry("600x300")
     win.title("Reclamar territorio")
     
     contenedor = tk.Frame(win)
@@ -1016,7 +1016,7 @@ def construir_cambiar_estado():
     global root, entrada_potencia
 
     win = tk.Toplevel(root)
-    win.geometry("600x300")
+    win.geometry("450x250")
     win.title("Cambiar estado")
 
     contenedor = tk.Frame(win)
@@ -1108,7 +1108,7 @@ def construir_mostrar_vida_territorios():
 def construir_status_potencia():
     global root, entrada_potencia, status_var
     win = tk.Toplevel(root)
-    win.geometry("400x500")
+    win.geometry("400x380")
     win.title("Estado de la potencia")
 
     contenedor = tk.Frame(win)
@@ -1126,7 +1126,7 @@ def construir_status_potencia():
 def construir_comprar_misiles():
     global root, entrada_potencia, entrada_cantidad_misiles
     win = tk.Toplevel(root)
-    win.geometry("400x400")
+    win.geometry("400x300")
     win.title("Menú comprar misiles")
 
     contenedor = tk.Frame(win)
@@ -1303,7 +1303,7 @@ def construir_menu():
     global root
     
     root = tk.Tk()
-    root.geometry("400x500")
+    root.geometry("400x560")
     root.title("Menu de opciones")
     
     contenedor = tk.Frame(root)
