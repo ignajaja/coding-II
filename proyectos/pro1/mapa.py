@@ -2,43 +2,18 @@ import tkinter as tk
 import json
 from datetime import datetime
 
-# ====================
-# registro de actividad
-# ====================
-def agregar_registro(tipo, detalle):
-    """
-    Agrega un nuevo registro a la lista y archivo de actividades
-    tipo: ATAQUE, COMPRA, CAMBIO, MUERTE, TERRITORIO
-    detalle: descripción de la actividad
-    """
-    global registro_actividades
-    
-    fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    registro = {
-        "fecha": fecha,
-        "tipo": tipo,
-        "detalle": detalle
-    }
-    
-    registro_actividades.append(registro)
-    guardar_registro()
 
 # ====================
 # constantes globales
 # ====================
-"""
-- ANCHO_MUNDO
-- ALTO_MUNDO
-- ESCALA
-- MARGEN
-- MAPA
-"""
 
-ANCHO_MUNDO = 180
+# coordenadas y datos importantes para el mapa
+ANCHO_MUNDO = 180 
 ALTO_MUNDO = 90
 ESCALA = 3
 MARGEN = 30
 
+# mapa que se muestra en el juego
 MAPA = [
     [
         "Costa Rica", 100, 98000,
@@ -141,7 +116,7 @@ MAPA = [
 # varialbes globales
 # =======================
 
-# lista de potencias
+# lista de potencias, vida y territorios
 potencias = []
 vida_territorios = [[0]]
 lista_registro = []
@@ -163,11 +138,13 @@ ultimo_disparo = None
 # ========================
 # guargar y cargar
 # ========================
+# GYC lista y archivo de potencias
 def guardar_potencias():
     global potencias
     try:
         with open("potencias.txt", "w") as archivo:
-            json.dump(potencias, archivo)
+            json.dump(potencias, archivo) # se usa el formato json.dump para guardar los datos en el .txt, esto hace que se carguen de manera mucho más sencilla
+            # aprendido en https://stackoverflow.com/questions/27745500/how-to-save-a-list-to-a-file-and-read-it-as-a-list-type
     except Exception:
         True
     return
@@ -182,6 +159,7 @@ def cargar_potencias():
         True
     return
 
+# GYC lista y archivo de vida de los territorios
 def guardar_vida_territorios():
     global vida_territorios
 
@@ -204,6 +182,7 @@ def cargar_vida_territorios():
         True
     return
 
+# GYC lista y archivo de registro de actividades 
 def guardar_registro():
     global lista_registro
 
@@ -222,7 +201,7 @@ def cargar_registro():
         True
     return
 
-
+# limpia el registro cuando se reinicia el juego
 def limpiar_registro():
     global lista_registro
     lista_registro = []
@@ -235,21 +214,15 @@ def limpiar_registro():
 #============================
 # commons
 #============================
-"""
-- coordenadas_a_xy
-- convertir_a_xy_mapa
-- mundo_a_canvas
-- normalizar_rectangulo
-- contar_extension
-- reducir_vida_territorio
-"""
 
+
+# genera el tiempo actual, útil para el registro de actividades
 def generar_tiempo():
     ahora = datetime.now() # importa el tiempom real
     timestamp = ahora.strftime("%Y-%m-%d %H:%M:%S")
     return str(timestamp)
 
-
+# guardan las diferentes acciones hechas durante el juego
 def actualizar_registro_ataque(potencia, territorio, coor):
     global lista_registro
     
@@ -260,7 +233,7 @@ def actualizar_registro_ataque(potencia, territorio, coor):
             break  
 
     tiempo = generar_tiempo()
-    texto = [[tiempo],[0],[potencia],[coor],[territorio],[vida_ter]]
+    texto = [[tiempo],[0],[potencia],[coor],[territorio],[vida_ter]] # le da el formato al atacar
     lista_registro.append(texto) 
     guardar_registro()
 
@@ -276,7 +249,7 @@ def actualizar_registro_cambio(potencia, cambio):
     global lista_registro
     
     tiempo = generar_tiempo()
-    texto = [[tiempo],[2],[potencia],["activa" if cambio == True else "inactiva"]]
+    texto = [[tiempo],[2],[potencia],["activa" if cambio == True else "inactiva"]] # le da el formato a el cambio de esdado de una potencia
     lista_registro.append(texto)
     guardar_registro()
     
@@ -301,6 +274,7 @@ def actualizar_registro_territorio(potencia):
 
 
 # coordenadas a xy solo recibe entradas de tipo entry
+# convierte las coordenadas de grados, minutos y segundos a x, y para la lógica
 def coordenadas_a_xy(e_x1, e_x2, e_x3, e_y1, e_y2, e_y3):
     try:
         x1 = float(e_x1.get()); x2 = float(e_x2.get()); x3 = float(e_x3.get())
@@ -316,7 +290,7 @@ def coordenadas_a_xy(e_x1, e_x2, e_x3, e_y1, e_y2, e_y3):
     
     return cx, cy
 
-
+# convierte los x, y para escribir en el mapa
 def convertir_a_xy_mapa(coord_x, coord_y):
     x1 = coord_x[0]; x2 = coord_x[1]; x3 = coord_x[2]
     y1 = coord_y[0]; y2 = coord_y[1]; y3 = coord_y[2]
@@ -324,12 +298,13 @@ def convertir_a_xy_mapa(coord_x, coord_y):
     sign_x = -1 if x1 < 0 else 1
     sign_y = -1 if y1 < 0 else 1
     
+    # convierte los grados a pixeles
     cx = sign_x * (abs(x1) + x2 / 6 + x3 / 360)
     cy = sign_y * (abs(y1) + y2 / 6 + y3 / 360)
     
     return cx, cy
 
-
+# convierte las coordenadas del mundo al mapa para ser escritas
 def mundo_a_canvas(xm, ym):
     # sumar el punto con el ancho y el alto del mundo multiplicados por la escala para que 0,0 est en el medio  
     ancho_canvas = MARGEN * 2 + (ANCHO_MUNDO * 2) * ESCALA
@@ -346,7 +321,8 @@ def normalizar_rectangulo(p1, p2): # hace que todos los rectángulos se puedan a
     y1 = p1[1]
     x2 = p2[0] 
     y2 = p2[1]
-        
+    
+    # no me funiconaba usar el min() y max(), entonces se hizo con if
     xmin = x1 if x1[0] < x2[0] else x2
     xmax = x1 if x1[0] > x2[0] else x2
     ymin = y1 if y1[0] < y2[0] else y2
@@ -359,7 +335,7 @@ def punto_en_rectangulo(x,y,rect):
     xmin,xmax,ymin,ymax = rect
     return ((xmin) <= x <= xmax) and (ymin <= y <= ymax) # true si le da a el rectángulo, false si no
 
-
+# cuenta la extensión de cada territorio
 def contar_extension(territorio):
     lista_resultado = [0, 0, 0]
     
@@ -378,6 +354,7 @@ def contar_extension(territorio):
 
     return sum(lista_resultado)
 
+# cuenta la extensión total que posee una potencia, juntando sus territorios
 def contar_extension_potencia(nombre):
     global potencias
     contador = 0
@@ -389,6 +366,7 @@ def contar_extension_potencia(nombre):
 
     return contador
 
+# inicializa la vida de los territorios
 def asignar_vida_territorios():
     global potencias, vida_territorios
     vida_territorios = [[1]]
@@ -406,30 +384,7 @@ def asignar_vida_territorios():
 
     return
 
-
-def destruir_territorio(nombre):
-    global potencias, vida_territorios
-    
-    copia = []
-    
-    for ter in vida_territorios[1:]:
-        if not ter[0] == nombre:
-            copia.append(ter)
-    
-    vida_territorios = copia
-    
-    for pots in potencias:
-        nueva_lista = []
-        for ter in pots[1]:
-            if not ter[0] == nombre:
-                nueva_lista.append(ter)
-        pots[1] = nueva_lista
-        
-    guardar_vida_territorios()
-    guardar_potencias()
-    return
-
-
+# baja la vida de un territorio al ser disparado o al comprar misiles
 def reducir_vida_territorio(territorio):
     global vida_territorios
     
@@ -442,9 +397,9 @@ def reducir_vida_territorio(territorio):
                         
                         if ter[0] == territorio:
                             ter[1] -= 10
-    
     return
 
+# verifica la vida de las potencias 
 def verificar_vida_potencia():
     global potencias, vida_territorios
 
@@ -463,6 +418,7 @@ def verificar_vida_potencia():
             pots[0][2] = False  # set indicador_pot to False (defeated)
             actualizar_registro_muerte(pots[0][0])
 
+# verifica que los puntos de el mapa no se traslapen
 def mapa_se_traslapa():
     global MAPA
 
@@ -486,20 +442,13 @@ def mapa_se_traslapa():
                                             return False
     return True 
 
-mapa_se_traslapa()
 
 
 #============================
 # lógica potencias
 #============================
-"""
-- guardar_potencias
-- cargar_potencias
-- reclamar_territorio
-- anadir_potencias
-- generar_status_potencia
-"""
 
+# está hasta arriba porque es necesario llamarlo antes de las demás construcciones de ventanas, por los casos de error
 def construir_error(msg = "Ha ocurrido un error inesperado"):
     global root
     win = tk.Toplevel(root)
@@ -514,11 +463,7 @@ def construir_error(msg = "Ha ocurrido un error inesperado"):
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
 
-# guardar a memoria
-
-
-
-# función para asignarle el territorio a una potencia
+# asigna el territorio a una potencia
 def reclamar_territorio():
     global potencias, entrada_potencia_r, entrada_territorio
 
@@ -556,7 +501,7 @@ def reclamar_territorio():
     return
 
 
-# añade una potencia nueva
+# añade una potencia nueva al juego
 def anadir_potencias():
     global potencias, entrada_potencia
 
@@ -611,7 +556,7 @@ def generar_status_potencia():
                 
     return 
 
-
+# cambia el estado de actividad de la potencia
 def cambiar_estado():
     global potencias
 
@@ -622,14 +567,13 @@ def cambiar_estado():
             nuevo_estado = True if pots[0][1] == False else False
             pots[0][1] = nuevo_estado
             break
-            # agregar_registro("CAMBIO", f"{nombre} pasó a {estado.lower()}")
     
     construir_confirmacion("Estado cambiado con éxito")
     actualizar_registro_cambio(nombre, nuevo_estado)
     guardar_potencias()
     return
 
-
+# cuenta la vida de los territorios, para saber cuánta le queda o saber si ya perdió
 def contar_vida_territorios_potencia(nombre_potencia):
     global potencias, vida_territorios
     vida_total = 0
@@ -649,7 +593,7 @@ def contar_vida_territorios_potencia(nombre_potencia):
     vida_promedio = vida_total / cantidad_territorios
     return vida_promedio
 
-
+# actualiza la vida de las potencias y territorios al ser disparados
 def actualizar_vida_potencia(ciudad):
     global potencias, vida_territorios
 
@@ -664,12 +608,10 @@ def actualizar_vida_potencia(ciudad):
                     
         except:
             continue
-    
-
     guardar_potencias()
     return
 
-
+# compra de misiles, aumenta la cantidad de misiles pero disminuye la vida de algún territorio
 def comprar_misiles():
     global potencias, vida_territorios, entrada_potencia, entrada_cantidad_misiles
 
@@ -707,6 +649,7 @@ def comprar_misiles():
 # Rankings
 #============================
 
+# expone el ranking de cual potencia es la que tiene más extensión
 def rank_extension():
     global potencias
 
@@ -717,7 +660,7 @@ def rank_extension():
     lista_rank = [nombre[0] for nombre in lista_potencias]
     return lista_rank
 
-
+# expone el ranking de cual potencia es la que tiene más vida
 def rank_porcentaje():
     global potencias
 
@@ -727,18 +670,25 @@ def rank_porcentaje():
     lista_rank = [nombre[0] for nombre in lista_potencias]
     return lista_rank
 
+# reinicia todo lo cargado en el juego
+def reiniciar_juego():
+    global potencias
+
+    potencias = []
+    guardar_potencias()
+    asignar_vida_territorios()
+    guardar_vida_territorios()
+    cargar_vida_territorios()
+    limpiar_registro()
+
+    return
 
 
 #============================
 # lógica de disparo
 #============================
-"""
-- disparar
-- guardar_vida_territorios
-- cargar_vida_territorios
-"""
 
-
+# verifica si la potencia puede atacar y ser atacada
 def verificar_potencia(nombre):
     global potencias
     for pots in potencias:
@@ -747,7 +697,7 @@ def verificar_potencia(nombre):
             
     return False
         
-
+# la función para atacar, manda un disparo que disminuye la vida de el territorio, su potencia, aumenta disparos recibidos y disparos lanzados del atacante
 def disparar():
     global ultimo_disparo, resultado_var, entrada_potencia
     punto_x = punto_y = 0
@@ -771,7 +721,6 @@ def disparar():
         return
 
     
-    # for nombre, puntos in MAPA:
     for pais in MAPA:
         for prov in pais[3:]:
             for ciud in prov[1]:
@@ -827,7 +776,6 @@ def disparar():
                             if propietario:
                                 propietario[0][6] += 1
 
-                            # destruir_territorio(ciud[0])
                             # recalcular vida de la potencia propietaria (si existe)
                             if propietario:
                                 propietario[0][3] = contar_vida_territorios_potencia(propietario[0][0])
@@ -869,13 +817,8 @@ def disparar():
 #============================
 # dibujo
 #============================
-"""
-- dibujar_ejes_y_cuadricula
-- dibujar_mapa
-- dibujar_disparo
-- refrescar_canvas
-"""
 
+# dibuja los ejes verticales y horizontales de el mapa
 def dibujar_ejes_y_cuadricula():
     x_left_c,  y_top_c = mundo_a_canvas(-ANCHO_MUNDO,  ALTO_MUNDO)
     x_right_c, y_bot_c = mundo_a_canvas( ANCHO_MUNDO, -ALTO_MUNDO)
@@ -888,16 +831,14 @@ def dibujar_ejes_y_cuadricula():
     for x in range(-ANCHO_MUNDO, ANCHO_MUNDO +1, paso):
         cx, _ = mundo_a_canvas(x, 0)
         canvas.create_line(cx, y_top_c, cx, y_bot_c, fill="#e0e0e0")
-        # if not x == 0:
         canvas.create_text(cx, y0_c - 290, text=str(f"{x}°"), anchor="n", font=("Arial", 8))
 
     for y in range(-ALTO_MUNDO, ALTO_MUNDO +1, paso):
         _, cy = mundo_a_canvas(0, y)
         canvas.create_line(x_left_c, cy, x_right_c, cy, fill="#e0e0e0")
-        # if not y == 0:
         canvas.create_text(x0_c -545, cy, text=str(f"{y}°"), anchor="e", font=("Arial", 8))
 
-
+# dibuja el mapa en sí, cada uno de los territorios
 def dibujar_mapa():
     for pais in MAPA:
         for provincia in pais[3:]:
@@ -923,7 +864,7 @@ def dibujar_mapa():
                 cy = (y_min_c + y_max_c) /2
                 canvas.create_text(cx,cy, text = ciudad[0], font=("Arial", 10, "bold"))
 
-
+# dibuja el pundo rojo en donde se ataca en el mapa
 def dibujar_disparo():
     if ultimo_disparo is None:
         return
@@ -935,7 +876,7 @@ def dibujar_disparo():
     canvas.create_line(cx - 8, cy, cx + 8, cy, fill = 'red', width = '2')
     canvas.create_line(cx, cy - 8, cx, cy + 8, fill = 'red', width = '2')
 
-
+# vuelve a cargar el mapa para actualizar cambios
 def refrescar_canvas():
     canvas.delete("all")
     dibujar_ejes_y_cuadricula()
@@ -947,6 +888,8 @@ def refrescar_canvas():
 # cargar 
 # ======================
 
+# llama todo lo que tiene que ser cargado para el funcionamiento del juego
+mapa_se_traslapa()
 if vida_territorios[0] == 0:
     asignar_vida_territorios()
 cargar_potencias()
@@ -957,11 +900,8 @@ cargar_registro()
 #============================
 # IU
 #============================
-"""
-- construir_iu
 
-"""
-
+# construye cuando hay que dar feedback de una confirmación al usuario
 def construir_confirmacion(msj="Ha ocurrido un tarea realizada con éxito"):
     global root
     win = tk.Toplevel(root)
@@ -976,7 +916,7 @@ def construir_confirmacion(msj="Ha ocurrido un tarea realizada con éxito"):
     tk.Label(panel, text=msj, font=("Arial", 12)).pack(anchor='w', pady=20)
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana añadir potencia
 def construir_anadir_potencia():
     global root, entrada_potencia
     win = tk.Toplevel(root)
@@ -993,7 +933,7 @@ def construir_anadir_potencia():
     tk.Button(panel, text="Aceptar", command=anadir_potencias, font=("Arial", 10)).pack(anchor="w", pady=10)
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana de reclamar territorio
 def construir_reclamar_territorio():
     global root, entrada_potencia_r, entrada_territorio
     win = tk.Toplevel(root)
@@ -1011,7 +951,7 @@ def construir_reclamar_territorio():
     tk.Button(panel, text="Aceptar", font=("Arial", 10), command=reclamar_territorio).pack(anchor="w", pady=10)
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana para cambiar de estado a la potencia
 def construir_cambiar_estado():
     global root, entrada_potencia
 
@@ -1030,7 +970,7 @@ def construir_cambiar_estado():
 
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana para mostrar las potencias
 def construir_mostrar_potencias():
     global root
     win = tk.Toplevel(root)
@@ -1064,6 +1004,7 @@ def construir_mostrar_potencias():
     
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
+# ventana de la inicialización de la vida de los territorios
 def construir_inicializar_vida_territorios():
     global root, territorios_iniciados
     win = tk.Toplevel(root)
@@ -1081,6 +1022,7 @@ def construir_inicializar_vida_territorios():
     tk.Label(panel, text="Territorios inicializados con éxito", font=("Arial", 12)).pack(anchor='w', pady=20)
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
+# ventada que muestra la vida de los territorios
 def construir_mostrar_vida_territorios():
     global root, vida_territorios
     win = tk.Toplevel(root)
@@ -1105,6 +1047,7 @@ def construir_mostrar_vida_territorios():
     
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
+# ventana del status de una potencia
 def construir_status_potencia():
     global root, entrada_potencia, status_var
     win = tk.Toplevel(root)
@@ -1123,6 +1066,7 @@ def construir_status_potencia():
     status_var = tk.StringVar(master=root, value="")
     tk.Label(panel, textvariable=status_var, font=("Arial", 11, "bold")).pack(anchor="n", pady=(4,0))
 
+# ventana para la compra de misiles
 def construir_comprar_misiles():
     global root, entrada_potencia, entrada_cantidad_misiles
     win = tk.Toplevel(root)
@@ -1141,7 +1085,7 @@ def construir_comprar_misiles():
     tk.Button(panel, text="Aceptar", command=comprar_misiles, font=("Arial", 10)).pack(anchor="w", pady=10)
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana de el rank por territorio
 def construir_ranking_territorio():
     global root
 
@@ -1161,7 +1105,7 @@ def construir_ranking_territorio():
         
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana de el rank por vida
 def construir_ranking_porcentaje():
     global root
 
@@ -1181,7 +1125,7 @@ def construir_ranking_porcentaje():
         
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana para mostrar el registro de actividades
 def construir_mostrar_registro():
     global root, lista_registro
 
@@ -1220,15 +1164,11 @@ def construir_mostrar_registro():
 
     tk.Button(panel_der, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
+# ventana para reiniciar el juego
 def construir_reiniciar_juego():
     global root, potencias
 
-    potencias = []
-    guardar_potencias()
-    asignar_vida_territorios()
-    guardar_vida_territorios()
-    cargar_vida_territorios()
-    limpiar_registro()
+    reiniciar_juego()
     
     win = tk.Toplevel(root)
     win.geometry("500x150")
@@ -1242,7 +1182,7 @@ def construir_reiniciar_juego():
     tk.Label(panel, text="Las potencias han sido reiniciadas, la vida ha sido\nreestablecida y se ha limpiado el registro", font=("Arial", 12)).pack(anchor='w', pady=20)
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
-
+# ventana que muesta el mapa del juego
 def construir_mapa():
     global root, entrada_x, entrada_y, resultado_var, canvas, entrada_x1, entrada_x2, entrada_x3, entrada_y1, entrada_y2, entrada_y3, entrada_potencia, vida_territorios
 
@@ -1298,7 +1238,7 @@ def construir_mapa():
     globals()["canvas"] = canvas_local
     refrescar_canvas()
     
-
+# ventana que muesta el menú principal, este es el root
 def construir_menu():
     global root
     
@@ -1331,8 +1271,9 @@ def construir_menu():
     tk.Button(panel_der,text='Ranking porcentaje', command=construir_ranking_porcentaje, width=tamano_botones[0], height=tamano_botones[1], bg="#fbd1ff").pack(anchor='w', padx=10, pady=10)
     tk.Button(panel_der, text="Cerrar", command=root.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=20)
 
-    
     root.mainloop()
     
+
+# activa la ventana principal (menú)
 if __name__ == "__main__":
     construir_menu()
