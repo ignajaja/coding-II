@@ -6,6 +6,7 @@ vuelos = []
 
 root = None
 entrada_origen = entrada_destino = entrada_precio = entrada_filas = entrada_columnas = entrada_codigo = entrada_orden =  entrada_buscar_fila = entrada_buscar_colu = None
+entrada_fila_asiento_1 = entrada_fila_asiento_2 = entrada_colu_asiento_1 = entrada_colu_asiento_2 = None
 tamano_botones = (20, 2)
 
 
@@ -87,34 +88,48 @@ def asientos_disponibles(codigo):
 
     return total - cont
 
-def asiento_a_letras(num, f, c):
-    global vuelos
+def asiento_a_numeros(f, c):
+    # global vuelos
 
-    flag_encontrado = False
+    # flag_encontrado = False
 
     num_fila = ord(f)
     num_fila -= 65
     num_colu = c-1
 
-    for i, vuelo in enumerate(vuelos):
-        if i+1 == num:
-            for fila in range(len(vuelo[4])):
-                print(fila == num_fila)
-                if fila == num_fila:
-                    for asiento in range(len(vuelo[4][0])):
-                        print(asiento, num_colu)
-                        if asiento == num_colu:
-                            flag_encontrado = True
 
-    if flag_encontrado == False:
-        return construir_error("No se ha encontrado el asiento en el vuelo")
+    # for i, vuelo in enumerate(vuelos):
+    #     if str(i+1) == num:
+    #         for fila in range(len(vuelo[4])):
+    #             if fila == num_fila:
+    #                 for asiento in range(len(vuelo[4][0])):
+    #                     if asiento == num_colu:
+    #                         flag_encontrado = True
+    #                         continue
+
+    # if flag_encontrado == False:
+    #     return construir_error("No se ha encontrado el asiento en el vuelo")
     return (num_fila, num_colu)
 
+def asiento_a_letras(f, c):
+    # global vuelos
 
-cargar_vuelos()
-print(asiento_a_letras(1, "A", 2))                   
-    
-    
+    # flag_encontrado = False
+
+    num_fila = chr(f + 65)
+    num_colu = c+1
+
+    # for i, vuelo in enumerate(vuelos):
+    #     if i+1 == num:
+    #         for fila in range(len(vuelo[4])):
+    #             if fila == f:
+    #                 for asiento in range(len(vuelo[4][0])):
+    #                     if asiento == c:
+    #                         flag_encontrado = True
+
+    # if flag_encontrado == False:
+    #     return construir_error("No se ha encontrado el asiento en el vuelo")
+    return (num_fila, num_colu)
 
 
 # funciones del programa
@@ -124,7 +139,7 @@ def crear_vuelo():
 
     cod_l1 = random.randint(65,90)
     cod_l2 = random.randint(65,90)
-    cod_nu = random.randint(0, 999)
+    cod_nu = random.randint(100, 999)
     codigo = f"{chr(cod_l1)}{chr(cod_l2)}{cod_nu}"
 
 
@@ -179,18 +194,23 @@ def reservar_asiento():
     global vuelos, entrada_buscar_fila, entrada_buscar_colu, entrada_orden
 
     orden = entrada_orden.get()
-    fila = entrada_buscar_fila.get()
-    colu = entrada_buscar_colu.get()
+    fila_e = entrada_buscar_fila.get()
+    colu_e = int(entrada_buscar_colu.get())
+
+    fila, colu = asiento_a_numeros(orden, fila_e, colu_e)
     
     flag_entontrar_asiento = False
 
     for index, vuelo in enumerate(vuelos):
         if str(index+1) == orden:
+            print(orden)
             try:
                 for i, filas in enumerate(vuelo[4]):
-                    if fila == str(i+1):
+                    if fila == i:
+                        print(fila)
                         for j, columnas in enumerate(filas):
-                            if colu == str(j+1):
+                            if colu == j:
+                                print(colu)
                                 if vuelo[4][i][j] == 1:
                                     return construir_error("Este asiento ya está ocupado")
                                 vuelo[4][i][j] = 1
@@ -200,28 +220,45 @@ def reservar_asiento():
                 construir_error("Este vuelo no contiene el asiento buscado")
 
     if flag_entontrar_asiento == True:
-        return construir_confirmacion("Se ha asignado el asiento con éxito")
+        return construir_confirmacion(f"Se ha asignado el asiento {asiento_a_letras(orden, fila, colu)[0]}{asiento_a_letras(orden, fila, colu)[1]}")
     return construir_error("No se ha encontrado el asiento buscado")
+
+
+
 
 
 def cancelar_reserva():
     global vuelos, entrada_buscar_fila, entrada_buscar_colu, entrada_orden
 
     orden = entrada_orden.get()
-    fila = entrada_buscar_fila.get()
-    colu = entrada_buscar_colu.get()
+    fila_e = entrada_buscar_fila.get()
+    colu_e = int(entrada_buscar_colu.get())
+
+    fila, colu = asiento_a_numeros(orden, fila_e, colu_e)
+    
+    flag_entontrar_asiento = False
 
     for index, vuelo in enumerate(vuelos):
         if str(index+1) == orden:
+            print(orden)
             try:
                 for i, filas in enumerate(vuelo[4]):
-                    if fila == str(i+1):
+                    if fila == i:
+                        print(fila)
                         for j, columnas in enumerate(filas):
-                            if colu == str(j+1):
+                            if colu == j:
+                                print(colu)
+                                if vuelo[4][i][j] == 0:
+                                    return construir_error("Este asiento no está ocupado")
                                 vuelo[4][i][j] = 0
+                                flag_entontrar_asiento = True
                                 guardar_vuelo()
             except:
                 construir_error("Este vuelo no contiene el asiento buscado")
+
+    if flag_entontrar_asiento == True:
+        return construir_confirmacion(f"Se ha cancelado la reserva del asiento {asiento_a_letras(orden, fila, colu)[0]}{asiento_a_letras(orden, fila, colu)[1]}")
+    return construir_error("No se ha encontrado el asiento buscado")
 
 
 def mostrar_estadisticas_ocupacion():
@@ -278,6 +315,37 @@ def generar_texto_vuelos():
 
     return texto
 
+
+def venta_masiva():
+    global vuelos, entrada_orden, entrada_buscar_fila, entrada_buscar_colu, entrada_asiento_1, entrada_asiento_2
+
+    orden = entrada_orden.get()
+    asiento_fila_1 = entrada_fila_asiento_1.get()
+    asiento_fila_2 = entrada_fila_asiento_2.get()
+    asiento_colu_1 = int(entrada_colu_asiento_1.get())
+    asiento_colu_2 = int(entrada_colu_asiento_2.get())
+
+    asiento_fila_1, asiento_colu_1 = asiento_a_numeros(asiento_fila_1, asiento_colu_1)
+    asiento_fila_2, asiento_colu_2 = asiento_a_numeros(asiento_fila_2, asiento_colu_2)
+
+    activar_reserva = False
+
+    for index, vuelo in enumerate(vuelos):
+        if str(index+1) == orden:
+            try:
+                for i, fila in enumerate(vuelo[4]):
+                    for j, colu in enumerate(vuelo[4][0]):
+                        if ((i,j) == (asiento_fila_1, asiento_colu_1)) or activar_reserva == True:
+                            activar_reserva = True
+                            vuelo[4][i][j] = 1
+                        if (i,j) == (asiento_fila_2, asiento_colu_2):
+                            construir_confirmacion("Se han guardado los asiento con éxito")
+                            guardar_vuelo()
+                            return
+            except:
+                return construir_error("No se han encontrado los asientos buscados")
+    return construir_error("No se ha encontrado el vuelo")
+ 
     
 def reiniciar_vuelos():
     global vuelos
@@ -298,7 +366,7 @@ def construir_crear_vuelo():
     global root, entrada_filas, entrada_columnas
     win = tk.Toplevel(root)
     win.geometry("400x300")
-    win.title("Menú pricipal")
+    win.title("Menú crear vuelo")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -319,7 +387,7 @@ def construir_asignar_vuelo():
     global root, entrada_precio, entrada_destino, entrada_origen, entrada_codigo, entrada_orden
     win = tk.Toplevel(root)
     win.geometry("400x500")
-    win.title("Menú pricipal")
+    win.title("Menú asignar vuelo")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -341,8 +409,7 @@ def construir_asignar_vuelo():
 def construir_mostrar_vuelo():
     global root, entrada_orden, vuelos
     win = tk.Toplevel(root)
-    # win.geometry("400x300")
-    win.title("Menú pricipal")
+    win.title("Menú mostrar vuelo")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -377,7 +444,7 @@ def construir_elegir_mostrar():
     global root, entrada_orden
     win = tk.Toplevel(root)
     win.geometry("400x200")
-    win.title("Mostrar vuelo")
+    win.title("Menú elegir vuelo")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -394,7 +461,7 @@ def construir_elegir_mostrar():
 def construir_reservar_asiento():
     global root, entrada_orden, entrada_buscar_colu, entrada_buscar_fila
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Menú reservar asiento")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -414,7 +481,7 @@ def construir_reservar_asiento():
 def construir_cancelar_reservar():
     global root, entrada_orden, entrada_buscar_colu, entrada_buscar_fila
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Menú cancelar reserva")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -435,7 +502,7 @@ def construir_cancelar_reservar():
 def construir_mostrar_estadisticas_ocupacion():
     global root
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Mostrar estadísticas ocupación")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -451,7 +518,7 @@ def construir_mostrar_estadisticas_ocupacion():
 def construir_estadísticas_ocupacion():
     global root, entrada_orden
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Menú estadísticas ocupación")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -468,7 +535,7 @@ def construir_estadísticas_ocupacion():
 def construir_mostrar_estadisticas_recaudacion():
     global root
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Mostrar estadísticas recaudación")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -483,7 +550,7 @@ def construir_mostrar_estadisticas_recaudacion():
 def construir_estadísticas_recaudación():
     global root, entrada_orden
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Menú estadísticas recaudación")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -502,7 +569,7 @@ def construir_estadísticas_recaudación():
 def construir_mostrar_por_destino():
     global root, vuelos, entrada_destino
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Mostrar vuelos por destino")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -536,7 +603,7 @@ def construir_mostrar_por_destino():
 def construir_buscar_por_destino():
     global root, entrada_destino
     win = tk.Toplevel(root)
-    win.title("Mostrar vuelo")
+    win.title("Menú vuelos por destino")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -547,14 +614,13 @@ def construir_buscar_por_destino():
     entrada_destino = tk.Entry(panel, width=25); entrada_destino.pack(anchor="w", pady=10)
     tk.Button(panel, text="Aceptar", command=construir_mostrar_por_destino, font=("Arial", 10, "bold"), fg="black", bg="#ffffff").pack(anchor='se')
 
-
     tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='w', pady=20)
 
 
 def construir_mostrar_vuelos_disponibles():
     global root
     win = tk.Toplevel(root)
-    win.title("Vuelos disponibles")
+    win.title("Mostrar vuelos disponibles")
 
     contenedor = tk.Frame(win)
     contenedor.pack(fill="both", expand=False, padx=10, pady=10)
@@ -576,13 +642,34 @@ def construir_mostrar_vuelos_disponibles():
     tk.Button(panel_der, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=10)
 
 
+def construir_reservar_varios():
+    global root, entrada_orden, entrada_fila_asiento_1, entrada_colu_asiento_1, entrada_fila_asiento_2, entrada_colu_asiento_2
+    win = tk.Toplevel(root)
+    win.title("Menú reservar asientos consecutivos")
+
+    contenedor = tk.Frame(win)
+    contenedor.pack(fill="both", expand=False, padx=10, pady=10)
+    panel = tk.Frame(contenedor)
+    panel.pack(fill="y", padx=(0,10))
+
+    tk.Label(panel, text='Ingrese el vuelo y las letras y números de los\nasientos consecutivos que desea reservar, siga el ejemplo', font=("Arial", 11)).pack(anchor="w", pady=10)
+    entrada_orden = tk.Entry(panel, width=25); entrada_orden.pack(anchor="w", pady=10); entrada_orden.insert(0, '2')
+    entrada_fila_asiento_1 = tk.Entry(panel, width=25); entrada_fila_asiento_1.pack(anchor="w", pady=10); entrada_fila_asiento_1.insert(0, 'A')
+    entrada_colu_asiento_1 = tk.Entry(panel, width=25); entrada_colu_asiento_1.pack(anchor="w", pady=10); entrada_colu_asiento_1.insert(0, '1')
+    entrada_fila_asiento_2 = tk.Entry(panel, width=25); entrada_fila_asiento_2.pack(anchor="w", pady=10); entrada_fila_asiento_2.insert(0, 'B')
+    entrada_colu_asiento_2 = tk.Entry(panel, width=25); entrada_colu_asiento_2.pack(anchor="w", pady=10); entrada_colu_asiento_2.insert(0, '4')
+
+    tk.Button(panel, text="Aceptar", command=venta_masiva, font=("Arial", 10, "bold"), fg="black", bg="#ffffff").pack(anchor='se')
+
+    tk.Button(panel, text="Cerrar", command=win.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='w', pady=20)
+
 
 def construir_menu():
     global root
     
     root = tk.Tk()
     root.geometry("400x560")
-    root.title("Menu de opciones")
+    root.title("Menú de opciones")
     
     contenedor = tk.Frame(root)
     contenedor.pack(fill="both", expand=True)
@@ -604,6 +691,7 @@ def construir_menu():
     tk.Button(panel_der,text='Cancelar reserva', command=construir_cancelar_reservar, width=tamano_botones[0], height=tamano_botones[1], bg="#badaff").pack(anchor='w', padx=10, pady=10)
     tk.Button(panel_der,text='Buscar por destino', command=construir_buscar_por_destino, width=tamano_botones[0], height=tamano_botones[1], bg="#badaff").pack(anchor='w', padx=10, pady=10)
     tk.Button(panel_izq,text='Mostrar vuelos disponibles', command=construir_mostrar_vuelos_disponibles, width=tamano_botones[0], height=tamano_botones[1], bg="#badaff").pack(anchor='w', padx=10, pady=10)
+    tk.Button(panel_der,text='Reservar varios\nasientos consecutivos', command=construir_reservar_varios, width=tamano_botones[0], height=tamano_botones[1], bg="#badaff").pack(anchor='w', padx=10, pady=10)
     tk.Button(panel_izq,text='Reiniciar vuelos', command=reiniciar_vuelos, width=tamano_botones[0], height=tamano_botones[1], bg="#badaff").pack(anchor='w', padx=10, pady=10)
 
     tk.Button(panel_der, text="Cerrar", command=root.destroy, font=("Arial", 10, "bold"), fg="white", bg="#ff0000").pack(anchor='se', pady=20)
