@@ -1,0 +1,19 @@
+{
+    "num_robots": 4,
+    "num_drones": 4,
+    "tiempo_prep": {
+        "10": 2,
+        "25": 3,
+        "50": 4,
+        "75": 5,
+        "100": 6
+    },
+    "tiempo_calle": 1,
+    "tiempo_piso": 0.4,
+    "tiempo_puerta": 1,
+    "ciudad_calles": 4,
+    "ciudad_avenidas": 7,
+    "tamano_cuadra_min": 1,
+    "tamano_cuadra_max": 3,
+    "pisos_max": 8
+}
